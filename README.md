@@ -8,7 +8,5 @@ Some RF testing scripts that communicate with a Wireless Starter Kit (WSTK) with
 
 - RSSI_sweep.py - Performs a CW sweep of a device running RAILtest on a WSTK and using a HackRF SDR to generate the CW signal.
 
-- image_rejection_test.py - Performs some iterative testing on different PHYs with different IR calibration values.
-
 # Contact
 Kris Young - kris.young@silabs.com
