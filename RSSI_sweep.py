@@ -64,6 +64,7 @@ DEBUG = 5 # 0=debugging messages off, higher numbers print more messages
 hackrf_amplitude = 127
 hackrf_tcxo_clock_error_ppm = -16
 hackrf_tx_vga_gain = 0     # 0-47 in 1dB steps
+hackrf_tone_duration_ms = 1000 # Run tone for 1 sec
 
 start_freq_hz = 900000000
 stop_freq_hz = 904000000
@@ -111,9 +112,9 @@ for freq in range(start_freq_hz,stop_freq_hz+step_freq_hz,step_freq_hz):
         # Start the hackRF tone in its own thread so it can run in parallel
         txthread=threading.Thread(target=H.hackRF_tone, args=(freq,
             hackrf_amplitude, hackrf_tx_vga_gain,
-            hackrf_tcxo_clock_error_ppm))
+            hackrf_tcxo_clock_error_ppm, hackrf_tone_duration_ms))
         txthread.start() # start thread
-        time.sleep(1) # Wait a sec for signal to stablize
+        time.sleep(1) # Wait for signal to stablize
         rssi_values.append(R.GetRssi())
         txthread.join() # wait for hackRF thread to finish before continuing
                         # with the loop

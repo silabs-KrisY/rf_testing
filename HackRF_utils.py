@@ -47,10 +47,15 @@ import os   #gives us the ability to run shell commands
 class HackRF():
     ''' Functions to use the HackRF as an RF test instrument - connected locally via USB '''
 
-    def hackRF_tone(self, freqHz, hackrf_amplitude, hackrf_vgaGain, hackrf_tcxo_clock_error_ppm):
-        """ Play a CW tone for 4 seconds at the specified amplitude and with the specified frequency and tcxo error """
+    def hackRF_tone(self, freqHz, hackrf_amplitude, hackrf_vgaGain,
+        hackrf_tcxo_clock_error_ppm, hackrf_tone_duration_ms):
+        """ Play a CW tone at the specified amplitude and with the specified
+            frequency and tcxo error. Sample rate is 10 MHz (default), which is
+            a period of 0.1us per sample, so the millisecond duration argument
+            is multiplied by 10000 """
 
     # Todo: Check retval (if command fails, notify and exit?)
-        retval = os.system("hackrf_transfer -f " + str(freqHz) + " -n 40000000 -c " +
-                str(hackrf_amplitude) + " -C " + str(hackrf_tcxo_clock_error_ppm) +
+        retval = os.system("hackrf_transfer -f " + str(freqHz) + " -n " +
+                str(hackrf_tone_duration_ms * 10000) + " -c " + str(hackrf_amplitude) +
+                " -C " + str(hackrf_tcxo_clock_error_ppm) +
                 " -x " + str(hackrf_vgaGain) + " >/dev/null 2>&1")
