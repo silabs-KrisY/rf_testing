@@ -54,7 +54,9 @@ import csv
 import time
 
 # TODO: supply these as command line arguments
-node_ip = "192.168.1.147"
+# node_ip = "192.168.1.147"
+comport = "/dev/tty.usbserial-14103"
+use_ip = 0
 
 railtest_channel = 0
 
@@ -66,8 +68,8 @@ hackrf_tcxo_clock_error_ppm = -16
 hackrf_tx_vga_gain = 0     # 0-47 in 1dB steps
 hackrf_tone_duration_ms = 1000 # Run tone for 1 sec
 
-start_freq_hz = 900000000
-stop_freq_hz = 904000000
+start_freq_hz = 902200000
+stop_freq_hz = start_freq_hz + 1200000
 step_freq_hz = 10000
 
 trial_name = "ch0_phy_test"
@@ -79,18 +81,24 @@ csv_filename = trial_name + ".csv"
 # Init our RAILtest object and HackRF (CW source)
 R = RAILtest()
 H = HackRF()
+if use_ip == 1:
+    # Initialize using TCP
+    # Reset the WSTK to start with a clean setup
+    if R.ResetWSTK_IP(node_ip) != None:
+        print("failed to open WSTK port")
+        exit()
 
-# Reset the WSTK to start with a clean setup
-if R.ResetWSTK(node_ip) != None:
-    print("failed to open WSTK port")
-    exit()
+    # open the telnet port and initialize the WSTK
+    if R.InitNodeIP(node_ip) != 0:
+        print("failed to open WSTK Telnet")
+        exit()
 
-# open the telnet port and initialize the WSTK
-rxser=R.InitNode(node_ip)
-if rxser == None:
-    print("failed to open WSTK Telnet")
-    exit()
-
+else:
+     # Initialize using serial
+     if R.InitNodeSerial(comport) != 0:
+          print("Failed to open com port")
+          exit()
+     
 R.SetChannel(railtest_channel)
 
 if csv_logging == True:

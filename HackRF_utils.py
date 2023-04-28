@@ -54,8 +54,12 @@ class HackRF():
             a period of 0.1us per sample, so the millisecond duration argument
             is multiplied by 10000 """
 
-    # Todo: Check retval (if command fails, notify and exit?)
         retval = os.system("hackrf_transfer -f " + str(freqHz) + " -n " +
                 str(hackrf_tone_duration_ms * 10000) + " -c " + str(hackrf_amplitude) +
                 " -C " + str(hackrf_tcxo_clock_error_ppm) +
                 " -x " + str(hackrf_vgaGain) + " >/dev/null 2>&1")
+        if retval != 0:
+            # Error occurred - print hex code and exit
+            print("Error executing hackrf utility: {:#x}".format(retval))
+            exit(1) #this doesn't exit because it's running in a separate thread
+                    # TODO: cause a returned error to exit
