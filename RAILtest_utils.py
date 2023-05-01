@@ -151,9 +151,7 @@ class RAILtest():
         resp = self.rxser.read_until(prompt_string) 
         if DEBUG>9: print(resp)
         railverstr = resp.split(b'{RAIL:',1)[1].split(b'}')[0]
-        print(railverstr)
         hashstr = resp.split(b'{hash:',1)[1].split(b'}')[0]
-        print(hashstr)
         return [railverstr,hashstr]
 
     def ResetWSTK_IP(self, wstk_ip):
