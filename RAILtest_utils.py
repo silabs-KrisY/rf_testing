@@ -44,8 +44,6 @@
 import telnetlib
 import serial
 import time
-import pexpect
-import pexpect.fdpexpect
 
 # TODO: supply this as command line arguments
 prompt_string = b">" # railtest prompt is ">" character
@@ -59,27 +57,25 @@ class RAILtest():
 
     def InitNodeSerial(self, comport):
         ''' Returns the RX handle after opening the serial port and initializing or None if it fails'''
-        if DEBUG>5: print("START INIT RX:")
+        if DEBUG>5: print("START INIT RX SERIAL:")
         try:
             self.rxser =  serial.Serial(comport, 115200, timeout=5) # com port to the RailTest CLI
-            #self.rxser = pexpect.fdpexpect.fdspawn(ser)
         except Exception as e:
             print(e)
             return(1)
         self.rxser.write(b"reset\r\n")
         resp=self.rxser.read_until(prompt_string)
-        if DEBUG>5: print("Resetting RAILTest")
         if DEBUG>9: print(resp)
         self.rxser.write(b"rx 0\r\n") # enter idle mode
         resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
-        if DEBUG>5: print('END INIT RX:')
+        if DEBUG>5: print('END INIT RX SERIAL:')
         return(0)
     
     def InitNodeIP(self, NodeIp):
         ''' Returns the RX handle after opening the Tx Telnet and initializing or None if it fails'''
         use_ip = True
-        if DEBUG>5: print("START INIT RX:")
+        if DEBUG>5: print("START INIT RX TELNET:")
         try:
             self.rxser = telnetlib.Telnet(NodeIp, 4901, 5) # Telnet port to the RailTest CLI
         except:
@@ -87,7 +83,7 @@ class RAILtest():
         self.rxser.write(b"rx 0\r\n") # enter idle mode
         resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
-        if DEBUG>5: print('END INIT RX:')
+        if DEBUG>5: print('END INIT RX TELNET:')
         return(0)
 
     def SetChannel(self, channel):
@@ -111,7 +107,6 @@ class RAILtest():
         if DEBUG>9: print(resp)
         self.rxser.write(b"getrssi\r\n")
         # Wait for processing
-        #rssi_resp = self.rxser.expect([prompt_string],2) #nonblock, 1 sec timeout
         rssi_resp = self.rxser.read_until(prompt_string)
         if DEBUG>9: print(rssi_resp)
         self.rxser.write(b"rx 0 \r\n") # turn off RX
@@ -135,44 +130,26 @@ class RAILtest():
         calstr = "0x{:04X}".format(calValue)
         self.rxser.write(b"setcal " + calstr.encode() + b"\r\n")
         # Wait for processing
-        #resp = self.rxser.expect([prompt_string],2) #nonblock, 1 sec timeou
+        resp = self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
-        if len(resp) < 2:
-            print("Error!")
-            return 0
-        if resp[0] != -1:
-            ircalval = resp[2].split(b'{IR_Calibration:',1)[1].split(b'}')[0]
-            return int(ircalval,16)
-        else:
-            return 1 #assume positive value returned is error
+        ircalval = resp.split(b'{IR_Calibration:',1)[1].split(b'}')[0]
+        return int(ircalval,16)
 
     def GetCal(self):
         ''' Get IR calibration value for current PHY'''
         self.rxser.write(b"getcal\r\n")
         # Wait for processing
-        #resp = self.rxser.expect([prompt_string],2) #nonblock, 1 sec timeout
+        resp = self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
-        if len(resp) < 2:
-            print("Error!")
-            return 0
-        if resp[0] != -1:
-            ircalval = resp[2].split(b'{IR_Calibration:',1)[1].split(b'}')[0]
-            return int(ircalval,16)
-        else:
-            return 1 #assume positive value returned is error
+        ircalval = resp.split(b'{IR_Calibration:',1)[1].split(b'}')[0]
+        return int(ircalval,16)
 
     def GetRailVer(self):
         ''' Get verbose rail version and hash'''
         self.rxser.write(b"getversionverbose\r\n")
         # Wait for processing
-
         resp = self.rxser.read_until(prompt_string) 
         if DEBUG>9: print(resp)
- #       if len(resp) < 2:
- #           print("Error!")
- #           return 0
- #       if resp[0] != -1:
-        if DEBUG>5: print("GetRailVer done")
         railverstr = resp.split(b'{RAIL:',1)[1].split(b'}')[0]
         print(railverstr)
         hashstr = resp.split(b'{hash:',1)[1].split(b'}')[0]

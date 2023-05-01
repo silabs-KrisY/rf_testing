@@ -45,18 +45,15 @@
 
 from RAILtest_utils import RAILtest
 from HackRF_utils import HackRF
-#import telnetlib
-#import serial
 import datetime
 import threading
-#import os   #gives us the ability to run shell commands
 import csv
 import time
 
 # TODO: supply these as command line arguments
-# node_ip = "192.168.1.147"
+node_ip = "192.168.1.149"
 comport = "/dev/tty.usbmodem0004400449691"
-use_ip = 0
+use_ip = 1
 
 railtest_channel = 0
 railtest_config_index = 0
@@ -85,7 +82,7 @@ H = HackRF()
 if use_ip == 1:
     # Initialize using TCP
     # Reset the WSTK to start with a clean setup
-    if R.ResetWSTK_IP(node_ip) != None:
+    if R.ResetWSTK_IP(node_ip) != 0:
         print("failed to open WSTK port")
         exit()
 
