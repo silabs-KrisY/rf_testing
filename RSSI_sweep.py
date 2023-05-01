@@ -55,10 +55,11 @@ import time
 
 # TODO: supply these as command line arguments
 # node_ip = "192.168.1.147"
-comport = "/dev/tty.usbserial-14103"
+comport = "/dev/tty.usbmodem0004400449691"
 use_ip = 0
 
 railtest_channel = 0
+railtest_config_index = 0
 
 DEBUG = 5 # 0=debugging messages off, higher numbers print more messages
 
@@ -100,6 +101,7 @@ else:
           exit()
      
 R.SetChannel(railtest_channel)
+R.SetConfigIndex(railtest_config_index)
 
 if csv_logging == True:
         csvfile = open(csv_filename,"w")
@@ -122,7 +124,7 @@ for freq in range(start_freq_hz,stop_freq_hz+step_freq_hz,step_freq_hz):
             hackrf_amplitude, hackrf_tx_vga_gain,
             hackrf_tcxo_clock_error_ppm, hackrf_tone_duration_ms))
         txthread.start() # start thread
-        time.sleep(1) # Wait for signal to stablize
+        time.sleep(0.5) # Wait for signal to stablize
         rssi_values.append(R.GetRssi())
         txthread.join() # wait for hackRF thread to finish before continuing
                         # with the loop

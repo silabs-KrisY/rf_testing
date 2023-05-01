@@ -50,7 +50,7 @@ import pexpect.fdpexpect
 # TODO: supply this as command line arguments
 prompt_string = b">" # railtest prompt is ">" character
 
-DEBUG = 9 # 0=debugging messages off, higher numbers print more messages
+DEBUG = 10 # 0=debugging messages off, higher numbers print more messages
 
 use_ip = False # This is set by the init functions
 
@@ -66,6 +66,10 @@ class RAILtest():
         except Exception as e:
             print(e)
             return(1)
+        self.rxser.write(b"reset\r\n")
+        resp=self.rxser.read_until(prompt_string)
+        if DEBUG>5: print("Resetting RAILTest")
+        if DEBUG>9: print(resp)
         self.rxser.write(b"rx 0\r\n") # enter idle mode
         resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
@@ -81,7 +85,7 @@ class RAILtest():
         except:
             return(1)
         self.rxser.write(b"rx 0\r\n") # enter idle mode
-        resp=self.rxser.read_until(prompt_string,1)
+        resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
         if DEBUG>5: print('END INIT RX:')
         return(0)
@@ -91,6 +95,14 @@ class RAILtest():
         self.rxser.write(b"SetChannel " + str(channel).encode() + b" \r\n")
         resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
+        if DEBUG>5: print("Setchannel done")
+
+    def SetConfigIndex(self, configIndex):
+        ''' Set RAILtest config index'''
+        self.rxser.write(b"setConfigIndex " + str(configIndex).encode() + b" \r\n")
+        resp=self.rxser.read_until(prompt_string)
+        if DEBUG>9: print(resp)
+        if DEBUG>5: print("Setconfig done")
 
     def GetRssi(self):
         ''' Enter RX mode, delay, execute getrssi in RAILtest and return the RSSI value'''
@@ -115,7 +127,7 @@ class RAILtest():
     def SetConfigIndex(self, configIndex):
         ''' Set config index and wait for prompt to return '''
         self.rxser.write(b"setConfigIndex " + str(configIndex).encode() + b"\r\n") # select config
-        resp=self.rxser.read_until(prompt_string,1)
+        resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
 
     def SetCal(self,calValue):
@@ -160,6 +172,7 @@ class RAILtest():
  #           print("Error!")
  #           return 0
  #       if resp[0] != -1:
+        if DEBUG>5: print("GetRailVer done")
         railverstr = resp.split(b'{RAIL:',1)[1].split(b'}')[0]
         print(railverstr)
         hashstr = resp.split(b'{hash:',1)[1].split(b'}')[0]
