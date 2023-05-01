@@ -45,55 +45,75 @@ import telnetlib
 import serial
 import time
 
-# TODO: supply these as command line arguments
-node_ip = "192.168.1.126"
-tx_node_name = b"[TX]" # for debug printing
-
+# TODO: supply this as command line arguments
 prompt_string = b">" # railtest prompt is ">" character
 
-DEBUG = 5 # 0=debugging messages off, higher numbers print more messages
+DEBUG = 10 # 0=debugging messages off, higher numbers print more messages
+
+use_ip = False # This is set by the init functions
 
 class RAILtest():
-    ''' Perform energy scan and read RSSIs from the device connected to the WSTK at NODE_IP '''
-    def __init___(self):
-        self.usage()
+    ''' Interface with RAILtest via serial port of IP address '''
 
-    def InitNode(self, NodeIp):
+    def InitNodeSerial(self, comport):
+        ''' Returns the RX handle after opening the serial port and initializing or None if it fails'''
+        if DEBUG>5: print("START INIT RX SERIAL:")
+        try:
+            self.rxser =  serial.Serial(comport, 115200, timeout=5) # com port to the RailTest CLI
+        except Exception as e:
+            print(e)
+            return(1)
+        self.rxser.write(b"reset\r\n")
+        resp=self.rxser.read_until(prompt_string)
+        if DEBUG>9: print(resp)
+        self.rxser.write(b"rx 0\r\n") # enter idle mode
+        resp=self.rxser.read_until(prompt_string)
+        if DEBUG>9: print(resp)
+        if DEBUG>5: print('END INIT RX SERIAL:')
+        return(0)
+    
+    def InitNodeIP(self, NodeIp):
         ''' Returns the RX handle after opening the Tx Telnet and initializing or None if it fails'''
-        if DEBUG>5: print("START INIT RX:")
+        use_ip = True
+        if DEBUG>5: print("START INIT RX TELNET:")
         try:
             self.rxser = telnetlib.Telnet(NodeIp, 4901, 5) # Telnet port to the RailTest CLI
         except:
-            return(None)
+            return(1)
         self.rxser.write(b"rx 0\r\n") # enter idle mode
-        resp=self.rxser.read_until(prompt_string,1)
+        resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
-        if DEBUG>5: print('END INIT RX:')
-        return(self.rxser)
+        if DEBUG>5: print('END INIT RX TELNET:')
+        return(0)
 
     def SetChannel(self, channel):
         ''' Set RAILtest channel'''
         self.rxser.write(b"SetChannel " + str(channel).encode() + b" \r\n")
-        resp=self.rxser.read_until(prompt_string,1)
+        resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
+        if DEBUG>5: print("Setchannel done")
+
+    def SetConfigIndex(self, configIndex):
+        ''' Set RAILtest config index'''
+        self.rxser.write(b"setConfigIndex " + str(configIndex).encode() + b" \r\n")
+        resp=self.rxser.read_until(prompt_string)
+        if DEBUG>9: print(resp)
+        if DEBUG>5: print("Setconfig done")
 
     def GetRssi(self):
         ''' Enter RX mode, delay, execute getrssi in RAILtest and return the RSSI value'''
         self.rxser.write(b"rx 1 \r\n") # turn on RX
-        resp=self.rxser.read_until(prompt_string,1)
+        resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
         self.rxser.write(b"getrssi\r\n")
-        # Wait for data received from other node
-        rssi_resp = self.rxser.expect([prompt_string],2) #nonblock, 1 sec timeout
+        # Wait for processing
+        rssi_resp = self.rxser.read_until(prompt_string)
         if DEBUG>9: print(rssi_resp)
         self.rxser.write(b"rx 0 \r\n") # turn off RX
-        resp=self.rxser.read_until(prompt_string,1)
+        resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
-        if rssi_resp[0] != -1:
-            rssival = rssi_resp[2].split(b'{rssi:',1)[1].split(b'}')[0]
-            return float(rssival)
-        else:
-            return 1 #assume positive value returned is error
+        rssival = rssi_resp.split(b'{rssi:',1)[1].split(b'}')[0]
+        return float(rssival)
 
     def DoCal(self):
         ''' Force IR calibration for PHY and return value'''
@@ -102,7 +122,7 @@ class RAILtest():
     def SetConfigIndex(self, configIndex):
         ''' Set config index and wait for prompt to return '''
         self.rxser.write(b"setConfigIndex " + str(configIndex).encode() + b"\r\n") # select config
-        resp=self.rxser.read_until(prompt_string,1)
+        resp=self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
 
     def SetCal(self,calValue):
@@ -110,73 +130,44 @@ class RAILtest():
         calstr = "0x{:04X}".format(calValue)
         self.rxser.write(b"setcal " + calstr.encode() + b"\r\n")
         # Wait for processing
-        resp = self.rxser.expect([prompt_string],2) #nonblock, 1 sec timeou
+        resp = self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
-        if len(resp) < 2:
-            print("Error!")
-            return 0
-        if resp[0] != -1:
-            ircalval = resp[2].split(b'{IR_Calibration:',1)[1].split(b'}')[0]
-            return int(ircalval,16)
-        else:
-            return 1 #assume positive value returned is error
+        ircalval = resp.split(b'{IR_Calibration:',1)[1].split(b'}')[0]
+        return int(ircalval,16)
 
     def GetCal(self):
         ''' Get IR calibration value for current PHY'''
         self.rxser.write(b"getcal\r\n")
         # Wait for processing
-        resp = self.rxser.expect([prompt_string],2) #nonblock, 1 sec timeout
+        resp = self.rxser.read_until(prompt_string)
         if DEBUG>9: print(resp)
-        if len(resp) < 2:
-            print("Error!")
-            return 0
-        if resp[0] != -1:
-            ircalval = resp[2].split(b'{IR_Calibration:',1)[1].split(b'}')[0]
-            return int(ircalval,16)
-        else:
-            return 1 #assume positive value returned is error
+        ircalval = resp.split(b'{IR_Calibration:',1)[1].split(b'}')[0]
+        return int(ircalval,16)
 
     def GetRailVer(self):
         ''' Get verbose rail version and hash'''
         self.rxser.write(b"getversionverbose\r\n")
         # Wait for processing
-        resp = self.rxser.expect([prompt_string],2) #nonblock, 1 sec timeout
+        resp = self.rxser.read_until(prompt_string) 
         if DEBUG>9: print(resp)
-        if len(resp) < 2:
-            print("Error!")
-            return 0
-        if resp[0] != -1:
-            railverstr = resp[2].split(b'{RAIL:',1)[1].split(b'}')[0]
-            print(railverstr)
-            hashstr = resp[2].split(b'{hash:',1)[1].split(b'}')[0]
-            print(hashstr)
-            return [railverstr,hashstr]
-        else:
-            return [0,0]
+        railverstr = resp.split(b'{RAIL:',1)[1].split(b'}')[0]
+        print(railverstr)
+        hashstr = resp.split(b'{hash:',1)[1].split(b'}')[0]
+        print(hashstr)
+        return [railverstr,hashstr]
 
-    def ResetWSTK(self, wstk_ip):
+    def ResetWSTK_IP(self, wstk_ip):
         ''' Reset the WSTK to be sure we're starting from a known point
             Returns an error code if failed and None if OK
         '''
         try:
             management = telnetlib.Telnet(wstk_ip, 4902, 5)
         except:
-            return(-1)
+            return(1)
 
         management.read_until(b'WSTK>',1)
         management.write(b"target reset 3A000108\r\n") # why the 3A000108?
         time.sleep(1) # wait for target to boot
         management.close()
-        return(None)
+        return(0)
 
-    def usage():
-        print("python WSTK_railtest_ZWaveRangeTest [options go here...]")
-        print("Use the python -u option to see the print statements come out unbuffered which can help find timing problems")
-
-    def hackRF_tone(freqHz, vgaGain):
-        """ Play a CW tone for 4 seconds at the specified amplitude and with the specified frequency and tcxo error """
-
-    # Todo: Check retval (if command fails, notify and exit?)
-        retval = os.system("hackrf_transfer -f " + str(freqHz) + " -n 10000000 -c " +
-                str(hackrf_amplitude) + " -C " + str(hackrf_tcxo_clock_error_ppm) +
-                " -x " + str(vgaGain) + " >/dev/null 2>&1")

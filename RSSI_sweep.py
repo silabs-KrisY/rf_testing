@@ -45,18 +45,18 @@
 
 from RAILtest_utils import RAILtest
 from HackRF_utils import HackRF
-#import telnetlib
-#import serial
 import datetime
 import threading
-#import os   #gives us the ability to run shell commands
 import csv
 import time
 
 # TODO: supply these as command line arguments
-node_ip = "192.168.1.147"
+node_ip = "192.168.1.149"
+comport = "/dev/tty.usbmodem0004400449691"
+use_ip = 1
 
 railtest_channel = 0
+railtest_config_index = 0
 
 DEBUG = 5 # 0=debugging messages off, higher numbers print more messages
 
@@ -66,8 +66,8 @@ hackrf_tcxo_clock_error_ppm = -16
 hackrf_tx_vga_gain = 0     # 0-47 in 1dB steps
 hackrf_tone_duration_ms = 1000 # Run tone for 1 sec
 
-start_freq_hz = 900000000
-stop_freq_hz = 904000000
+start_freq_hz = 902200000
+stop_freq_hz = start_freq_hz + 1200000
 step_freq_hz = 10000
 
 trial_name = "ch0_phy_test"
@@ -79,19 +79,26 @@ csv_filename = trial_name + ".csv"
 # Init our RAILtest object and HackRF (CW source)
 R = RAILtest()
 H = HackRF()
+if use_ip == 1:
+    # Initialize using TCP
+    # Reset the WSTK to start with a clean setup
+    if R.ResetWSTK_IP(node_ip) != 0:
+        print("failed to open WSTK port")
+        exit()
 
-# Reset the WSTK to start with a clean setup
-if R.ResetWSTK(node_ip) != None:
-    print("failed to open WSTK port")
-    exit()
+    # open the telnet port and initialize the WSTK
+    if R.InitNodeIP(node_ip) != 0:
+        print("failed to open WSTK Telnet")
+        exit()
 
-# open the telnet port and initialize the WSTK
-rxser=R.InitNode(node_ip)
-if rxser == None:
-    print("failed to open WSTK Telnet")
-    exit()
-
+else:
+     # Initialize using serial
+     if R.InitNodeSerial(comport) != 0:
+          print("Failed to open com port")
+          exit()
+     
 R.SetChannel(railtest_channel)
+R.SetConfigIndex(railtest_config_index)
 
 if csv_logging == True:
         csvfile = open(csv_filename,"w")
@@ -114,7 +121,7 @@ for freq in range(start_freq_hz,stop_freq_hz+step_freq_hz,step_freq_hz):
             hackrf_amplitude, hackrf_tx_vga_gain,
             hackrf_tcxo_clock_error_ppm, hackrf_tone_duration_ms))
         txthread.start() # start thread
-        time.sleep(1) # Wait for signal to stablize
+        time.sleep(0.5) # Wait for signal to stablize
         rssi_values.append(R.GetRssi())
         txthread.join() # wait for hackRF thread to finish before continuing
                         # with the loop
