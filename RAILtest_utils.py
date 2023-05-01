@@ -48,7 +48,7 @@ import time
 # TODO: supply this as command line arguments
 prompt_string = b">" # railtest prompt is ">" character
 
-DEBUG = 10 # 0=debugging messages off, higher numbers print more messages
+DEBUG = 0 # 0=debugging messages off, higher numbers print more messages
 
 use_ip = False # This is set by the init functions
 
